@@ -1,0 +1,7 @@
+node_modules/
+
+# Built by glib-compile-schemas, regenerate with `make schemas`
+schemas/gschemas.compiled
+
+# Output of `make pack`
+*.shell-extension.zip

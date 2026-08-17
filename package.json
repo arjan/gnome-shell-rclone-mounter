@@ -1,0 +1,17 @@
+{
+  "name": "gnome-shell-rclone-mounter",
+  "version": "1.0.0",
+  "description": "GNOME Shell extension to mount rclone remotes from the panel",
+  "license": "GPL-2.0-or-later",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "eslint .",
+    "test": "gjs -m tests/smoke.js"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.8.1",
+    "globals": "^17.11.0"
+  }
+}
