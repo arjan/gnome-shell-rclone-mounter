@@ -1,0 +1,41 @@
+---
+description: How to verify changes to this extension
+alwaysApply: true
+---
+
+# Verifying changes
+
+Run `make check` (compiles the schema, lints, runs the headless tests) before
+reporting work as done. Add a case to `tests/smoke.js` for any new logic in
+`lib/`; it runs under plain `gjs` with a fixture config and an in-memory
+GSettings backend, so it must stay free of side effects.
+
+## You cannot restart GNOME Shell
+
+The session is Wayland, so the shell cannot be restarted in place and
+`gnome-extensions list` will not show a newly linked extension until the user
+logs out and back in. Never claim the extension was loaded or enabled without
+evidence. To exercise shell-side code, use `make nested`, which starts a nested
+GNOME Shell, and tell the user when a logout is genuinely required.
+
+`make logs` follows `gnome-shell` output for runtime errors.
+
+## Testing mounts safely
+
+The user has real rclone mounts in use. Never unmount, remount or otherwise
+disturb a mount you did not create. To test the mount path, use a scratch mount
+point and clean it up:
+
+```bash
+rclone mount --daemon <remote>: ~/mnt/scratch-test --read-only
+rg -n 'scratch-test' /proc/self/mounts   # confirm it mounted
+fusermount3 -uz ~/mnt/scratch-test       # lazy unmount; plain -u often gives EBUSY
+```
+
+Check `/proc/self/mounts` before and after to confirm pre-existing mounts are
+untouched.
+
+## Do not edit generated files
+
+`schemas/gschemas.compiled` and `node_modules/` are build output and are ignored
+by git.

@@ -1,0 +1,56 @@
+---
+description: Conventions for this GNOME Shell 49 extension
+alwaysApply: true
+---
+
+# GNOME Shell extension conventions
+
+`best-practices.md` in the repository root is the upstream GNOME/EGO guidance for
+AI-generated extensions and overrides general JavaScript habits. Read it before
+changing extension code.
+
+## Target exactly GNOME Shell 49
+
+No compatibility shims, no `typeof x === 'function'` guards, no optional chaining
+on values that cannot be null. Use `TextDecoder`, `console.error` and ESM
+directly.
+
+## Process isolation
+
+- `extension.js` and `shell/` run in GNOME Shell.
+- `prefs.js` runs in a separate preferences process.
+- `lib/` is shared and must **never** import `St`, `Clutter`, `Gtk`, `Gdk` or `Adw`.
+
+Keep `extension.js` limited to `enable()`/`disable()`, kept adjacent, with new
+logic going into a module.
+
+## Resource ownership
+
+A class cleans up whatever it created, in `destroy()`, in this order: GLib
+sources, signal handlers, child references, then `super.destroy()` last. Never
+guard with a `this._destroyed` flag; drop the reference after destroying.
+
+```js
+destroy() {
+    this._monitor.disconnect(this._changedId);
+    this._settings.disconnect(this._settingsChangedId);
+    super.destroy();
+}
+```
+
+## Settings
+
+The schema ID lives in `metadata.json`, so always use `this.getSettings()`
+without arguments. Run `make schemas` after editing the schema, or GNOME Shell
+will read stale defaults.
+
+## Mount state
+
+Never cache whether a remote is mounted. Derive it from `/proc/self/mounts` and
+refresh on `Gio.UnixMountMonitor::mounts-changed`, so mounts created outside the
+extension are handled correctly.
+
+## Comments
+
+Only document constraints the code cannot express, such as why `--daemon` is used
+or why an unmount needs a lazy fallback. No line-by-line narration.
