@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.rclone-mounter"
+          path="/org/gnome/shell/extensions/rclone-mounter/">
+    <key name="mountpoints" type="a{ss}">
+      <default>{}</default>
+      <summary>Per-remote mount points</summary>
+      <description>
+        Maps an rclone remote name to the directory it is mounted on. Remotes
+        without an entry here fall back to ~/mnt/&lt;remote&gt;.
+      </description>
+    </key>
+    <key name="mount-options" type="s">
+      <default>'--vfs-cache-mode=writes'</default>
+      <summary>Extra rclone mount flags</summary>
+      <description>
+        Additional command line flags appended to every rclone mount call.
+      </description>
+    </key>
+  </schema>
+</schemalist>

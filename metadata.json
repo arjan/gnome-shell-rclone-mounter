@@ -1,0 +1,10 @@
+{
+  "name": "Rclone Mounter",
+  "description": "Mount configured rclone configs into your filesystem",
+  "uuid": "gnome-shell-rclone-mounter@github.com",
+  "settings-schema": "org.gnome.shell.extensions.rclone-mounter",
+  "gettext-domain": "gnome-shell-rclone-mounter",
+  "shell-version": [
+    "49"
+  ]
+}
