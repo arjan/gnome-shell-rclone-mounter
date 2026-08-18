@@ -47,9 +47,16 @@ disable:
 prefs:
 	gnome-extensions prefs $(UUID)
 
-# A nested shell picks up code changes without ending the session. Wayland only.
+# GNOME 49+ uses the Mutter Development Kit instead of --nested (removed with X11).
+MUTTER_DEVKIT := /usr/libexec/mutter-devkit
+
 nested:
-	dbus-run-session -- gnome-shell --nested --wayland
+	@if [ ! -x '$(MUTTER_DEVKIT)' ]; then \
+		echo 'mutter-devkit is not installed (expected at $(MUTTER_DEVKIT)).'; \
+		echo 'On Ubuntu: sudo apt install mutter-dev-bin'; \
+		exit 1; \
+	fi
+	dbus-run-session -- gnome-shell --devkit --wayland
 
 logs:
 	journalctl -f -o cat --since now /usr/bin/gnome-shell

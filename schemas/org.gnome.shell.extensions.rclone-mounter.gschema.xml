@@ -4,10 +4,17 @@
           path="/org/gnome/shell/extensions/rclone-mounter/">
     <key name="mountpoints" type="a{ss}">
       <default>{}</default>
-      <summary>Per-remote mount points</summary>
+      <summary>Configured mounts</summary>
       <description>
-        Maps an rclone remote name to the directory it is mounted on. Remotes
-        without an entry here fall back to ~/mnt/&lt;remote&gt;.
+        Maps an rclone remote name to the directory it is mounted on. Only
+        remotes listed here appear in the panel menu.
+      </description>
+    </key>
+    <key name="mount-at-login" type="as">
+      <default>[]</default>
+      <summary>Mount at login</summary>
+      <description>
+        Remote names to mount automatically when the extension starts.
       </description>
     </key>
     <key name="mount-options" type="s">

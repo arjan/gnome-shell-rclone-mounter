@@ -1,0 +1,4 @@
+#!/bin/sh
+# Stands in for a binary installed outside PATH so findProgram's fallback
+# search can be exercised. Never executed by the tests.
+exit 0

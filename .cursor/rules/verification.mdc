@@ -15,8 +15,8 @@ GSettings backend, so it must stay free of side effects.
 The session is Wayland, so the shell cannot be restarted in place and
 `gnome-extensions list` will not show a newly linked extension until the user
 logs out and back in. Never claim the extension was loaded or enabled without
-evidence. To exercise shell-side code, use `make nested`, which starts a nested
-GNOME Shell, and tell the user when a logout is genuinely required.
+evidence. To exercise shell-side code, use `make nested` (GNOME 49+:
+`gnome-shell --devkit --wayland`; requires `mutter-dev-bin` on Ubuntu), and tell the user when a logout is genuinely required.
 
 `make logs` follows `gnome-shell` output for runtime errors.
 

@@ -1,18 +1,25 @@
 # Rclone Mounter
 
-A GNOME Shell extension that mounts and unmounts your [rclone][rclone] remotes
-from a panel menu. Every remote in your rclone configuration appears as a
-switch: flip it on to mount, off to unmount.
+A GNOME Shell extension that mounts and unmounts [rclone][rclone] remotes from a
+panel menu. This is a **mount manager**, not an rclone configuration tool —
+remotes are created with `rclone config`; here you choose which remotes to mount
+and where.
 
-> Generated with AI for personal use. Do **not** upload this to
-> [extensions.gnome.org][ego] unless you understand JavaScript and are willing to
-> maintain it — see [Publishing](#publishing) below.
+The author understands this JavaScript and maintains the extension.
 
 ## Requirements
 
 - GNOME Shell 49
-- `rclone` in `PATH` (developed against 1.75)
+- `rclone` (developed against 1.75)
 - `fusermount3` (or `fusermount`), part of the `fuse3` package
+
+GNOME Shell inherits the session `PATH`, which is set before any shell rc file
+runs, so a `PATH` exported from `~/.zshrc` or `~/.bashrc` does not reach the
+extension. Binaries are looked up on `PATH` first and then in
+`/home/linuxbrew/.linuxbrew/bin`, `~/.linuxbrew/bin`, `/opt/homebrew/bin`,
+`~/.local/bin` and `/usr/local/bin`. For an install somewhere else, add its
+directory to the session `PATH` with a
+[`~/.config/environment.d/*.conf`][envd] drop-in and log out and back in.
 - At least one remote configured with `rclone config`
 
 ## Install
@@ -31,53 +38,51 @@ make enable
 
 ## Usage
 
-Click the panel icon to see your remotes. The icon picks up the accent colour
-while anything is mounted.
+1. Open preferences (`make prefs` or **Manage Mounts…** in the panel menu).
+2. Click **Add Mount**, pick a remote from `rclone listremotes`, and set a mount
+   point (defaults to `~/mnt/<remote-name>`).
+3. Use the panel icon to mount or unmount. An unmounted row is a plain menu
+   item: click it to mount (a spinner shows until the folder has files, then
+   Files opens). A mounted row has an eject icon; click the name to open Files,
+   or eject to unmount.
 
-Mount points live in the extension's own settings, not in `rclone.conf` — see
+The icon picks up the accent colour while anything is mounted.
+
+Mount points are stored in the extension settings, not in `rclone.conf` — see
 [Why mount points are configured here](#why-mount-points-are-configured-here).
-Open `make prefs` to set them. Each remote defaults to `~/mnt/<remote-name>`,
-created automatically on first mount. Leading `~` is expanded, and clearing a
-field restores the default.
 
-The same window has a field for extra `rclone mount` flags applied to every
-mount, defaulting to `--vfs-cache-mode=writes`. Anything `rclone mount` accepts
-works here, for example `--read-only`, `--umask 002` or `--bwlimit 1M`.
+**Mount at login:** enable per mount in preferences; remotes marked this way are
+mounted when the extension starts (after login or shell reload).
+
+**Open in Files:** a successful mount opens the folder automatically. Click a
+mounted remote's name to open it again.
+
+Global **mount options** (default `--vfs-cache-mode=writes`) apply to every
+mount. Anything `rclone mount` accepts works, for example `--read-only`,
+`--umask 002` or `--bwlimit 1M`.
 
 ## Why mount points are configured here
 
 `rclone.conf` describes only *what* a remote is — its backend type and
-credentials:
-
-```ini
-[gdrive-work]
-type = drive
-scope = drive
-team_drive = 0ABCDEF
-```
-
-There is no key for a target directory, because the mount point is an argument
-to `rclone mount` rather than a property of the remote. So the extension reads
-`rclone.conf` to discover which remotes exist, and keeps the *where* in its own
-GSettings (`mountpoints`, a remote-name to directory map).
+credentials. There is no key for a target directory, because the mount point is
+an argument to `rclone mount`. The extension calls `rclone listremotes` to list
+available remotes when you add a mount, and stores the *where* in GSettings
+(`mountpoints`, a remote-name to directory map).
 
 ## How it works
 
-- **Discovery** parses `rclone.conf` as a plain INI file, honouring
-  `RCLONE_CONFIG`, then `~/.config/rclone/rclone.conf`, then `~/.rclone.conf`.
-  The menu rebuilds itself when the file changes, so newly added remotes appear
-  without a reload.
+- **Available remotes** come from `rclone listremotes` when you add a mount in
+  preferences. The panel only shows remotes you have explicitly added.
 - **State** is always read from `/proc/self/mounts`, looking for the
   `fuse.rclone` filesystem type, and refreshed from `Gio.UnixMountMonitor`.
-  Nothing is cached, so mounts made outside the extension — by hand, fstab or a
-  systemd unit — show as mounted too.
-- **Mounting** runs `rclone mount --daemon`. Because rclone daemonises, the
-  mount survives a GNOME Shell restart instead of dying with its parent, and
-  rclone only exits successfully once the mount is actually ready, so failures
-  are reported accurately as a notification.
-- **Unmounting** calls `fusermount -u`, falling back to a lazy `-u -z` unmount.
-  A plain unmount frequently fails with `EBUSY` because something on the desktop
-  grabs a fresh mount almost immediately.
+  Nothing is cached, so mounts made outside the extension still show as mounted.
+- **Mounting** runs `rclone mount --daemon`, then waits until the mount point
+  lists at least one file before opening Files. Failures are shown in a dialog
+  with rclone's error. The mount survives a GNOME Shell restart. If rclone has
+  died and left a disconnected FUSE mount, clicking the row tears that down and
+  mounts again.
+- **Unmounting** calls `fusermount -u`, falling back to lazy `-u -z` when the
+  mount is still busy.
 
 ## Development
 
@@ -86,44 +91,39 @@ make check    # compile schemas, lint, run tests
 make test     # headless test suite, no GNOME Shell needed
 make lint     # eslint (npm install first)
 make logs     # follow gnome-shell output
-make nested   # nested shell to test changes without logging out
+make nested   # nested devkit shell (GNOME 49+: needs mutter-dev-bin on Ubuntu)
 make pack     # distributable zip
 ```
 
-`make nested` is the fast iteration loop on Wayland: it starts a second GNOME
-Shell in a window that loads your working copy, so you do not have to end your
-session to see changes. Note that a nested shell shares your dconf, so settings
-changes there are real.
+`make nested` starts a nested GNOME Shell via the Mutter Development Kit
+(`gnome-shell --devkit --wayland`). On GNOME 49, `--nested` was removed; install
+`mutter-dev-bin` on Ubuntu if the command complains about a missing
+`mutter-devkit`.
 
-The test suite (`tests/smoke.js`) runs under plain `gjs` against a fixture
-config and an in-memory GSettings backend, so it never reads your real
-`rclone.conf` or writes to dconf.
+The test suite (`tests/smoke.js`) runs under plain `gjs` with a fixture
+`rclone.conf` (via `RCLONE_CONFIG`) and an in-memory GSettings backend.
 
 ### Layout
 
 | Path | Process | Notes |
 | --- | --- | --- |
-| `extension.js` | shell | Entry point; `enable()`/`disable()` only |
-| `shell/indicator.js` | shell | Panel button, menu, mount state |
-| `prefs.js` | preferences | Adwaita preferences window |
-| `lib/rclone.js` | both | Config parsing, mount state, mount/unmount |
+| `extension.js` | shell | Entry point; mount-at-login on `enable()` |
+| `shell/indicator.js` | shell | Panel menu, mount/unmount, Open in Files |
+| `prefs.js` | preferences | Add Mount, mount list, login toggles |
+| `lib/rclone.js` | both | `listremotes`, mount state, mount/unmount |
 | `schemas/` | — | GSettings schema |
 | `tests/` | — | Headless gjs checks |
 
-The two processes are isolated, so `lib/rclone.js` is shared code and must never
-import `St`, `Clutter`, `Gtk`, `Gdk` or `Adw`.
+`lib/rclone.js` must never import `St`, `Clutter`, `Gtk`, `Gdk` or `Adw`.
 
 ### Agentic development
 
-`best-practices.md` is the upstream GNOME/EGO guidance for AI-generated
-extensions and is the authority for this codebase. The conventions and the
-verification workflow are encoded as always-on Cursor rules in `.cursor/rules/`,
-so an agent picks them up automatically. The short version: target GNOME 49
-only, no defensive compatibility checks, clean up in `destroy()`, and verify
-with `make check` rather than assuming.
+`best-practices.md` is the upstream GNOME/EGO guidance. Cursor rules in
+`.cursor/rules/` encode conventions and verification. Run `make check` before
+reporting work done.
 
 When testing mounts, never disturb a mount you did not create — use a scratch
-mount point with `--read-only` and lazy-unmount it afterwards.
+read-only mount and lazy-unmount it afterwards.
 
 ## Caveats
 
@@ -134,36 +134,21 @@ mount point with `--read-only` and lazy-unmount it afterwards.
 - Mount flags are global rather than per remote.
 - Remotes are always mounted at their root, not at a subpath.
 
-## Extras worth adding
+## Later extras
 
-Ideas, roughly in order of usefulness:
-
-- **Open in Files** — a per-remote menu action that opens the mount point.
-- **Mount at login** — a per-remote toggle that mounts on `enable()`.
-- **systemd user units** instead of `--daemon`, giving restart-on-failure and
-  proper logging per mount.
-- **Per-remote flags**, so one remote can be read-only and another cached.
-- **Free space and usage** per remote via `rclone about`, shown in the menu.
-- **Health notifications** when a mount disappears unexpectedly.
-- **Live transfer stats** through rclone's `rc` API, for a spinner or throughput
-  readout while files are syncing.
-- **Keyboard shortcuts** for toggling a specific remote.
-- **Subpath mounts**, mounting `remote:some/folder` rather than the root.
-- **Encrypted config support** by prompting for the password and passing it via
-  `RCLONE_CONFIG_PASS`.
-- **Translations** — the strings are already wrapped in `gettext`, so only the
-  `po/` machinery is missing.
+systemd user units, per-remote flags, `rclone about`, encrypted config password
+prompts, live transfer stats, keyboard shortcuts, subpath mounts, translations.
 
 ## Publishing
 
-The generated files carry an "AI for personal use" notice, which EGO reviewers
-expect on AI-generated code. If you review the code, understand it and intend to
-maintain it, remove those notice comments before submitting — leaving them in
-suggests the author never read the code and will be flagged during review.
+`make pack` builds a zip that can be submitted to
+[extensions.gnome.org][ego].
 
 ## License
 
-GPL-2.0-or-later.
+This program is free software under the [GNU General Public License v2.0 or
+later](LICENSE) (`GPL-2.0-or-later`).
 
 [rclone]: https://rclone.org
 [ego]: https://extensions.gnome.org
+[envd]: https://www.freedesktop.org/software/systemd/man/latest/environment.d.html

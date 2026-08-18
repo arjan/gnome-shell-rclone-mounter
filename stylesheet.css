@@ -1,3 +1,7 @@
 .system-status-icon.rclone-mounted {
     color: -st-accent-color;
 }
+
+.rclone-eject-button {
+    padding: 2px 6px;
+}
