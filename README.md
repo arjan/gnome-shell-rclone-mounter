@@ -1,11 +1,11 @@
 # Rclone Mounter
 
 A GNOME Shell extension that mounts and unmounts [rclone][rclone] remotes from a
-panel menu. This is a **mount manager**, not an rclone configuration tool —
-remotes are created with `rclone config`; here you choose which remotes to mount
-and where.
+panel menu. Remotes are created with `rclone config`; here you choose which ones
+to mount and where.
 
-The author understands this JavaScript and maintains the extension.
+For a more complete rclone client — file watch/sync, per-profile status, an
+event log, and rclone.conf backup — see [RClone Manager][rclone-manager].
 
 ## Requirements
 
@@ -150,5 +150,6 @@ This program is free software under the [GNU General Public License v2.0 or
 later](LICENSE) (`GPL-2.0-or-later`).
 
 [rclone]: https://rclone.org
+[rclone-manager]: https://github.com/germanztz/gnome-shell-extension-rclone-manager
 [ego]: https://extensions.gnome.org
 [envd]: https://www.freedesktop.org/software/systemd/man/latest/environment.d.html
