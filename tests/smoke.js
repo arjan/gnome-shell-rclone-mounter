@@ -189,7 +189,7 @@ for (const dir of [emptyDir, populatedDir, delayedDir]) {
 }
 
 print('live mount detection');
-check('active mounts are reported as a set', Rclone.activeMounts() instanceof Set, true);
+check('active mounts are reported as a set', await Rclone.activeMounts() instanceof Set, true);
 
 print(failures === 0 ? '\nall checks passed' : `\n${failures} check(s) failed`);
 if (failures > 0)

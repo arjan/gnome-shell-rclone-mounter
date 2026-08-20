@@ -39,7 +39,7 @@ export default class RcloneMounterExtension extends Extension {
     async _mountAtLogin() {
         const loginRemotes = Rclone.getMountAtLogin(this._settings);
         const mountpoints = this._settings.get_value('mountpoints').deep_unpack();
-        const mounted = Rclone.activeMounts();
+        const mounted = await Rclone.activeMounts();
         const options = Rclone.parseMountOptions(this._settings.get_string('mount-options'));
 
         for (const remote of loginRemotes) {

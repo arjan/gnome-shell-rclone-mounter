@@ -47,7 +47,7 @@ will read stale defaults.
 ## Mount state
 
 Never cache whether a remote is mounted. Derive it from `/proc/self/mounts` and
-refresh on `Gio.UnixMountMonitor::mounts-changed`, so mounts created outside the
+refresh on `GioUnix.MountMonitor::mounts-changed`, so mounts created outside the
 extension are handled correctly.
 
 ## Comments

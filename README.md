@@ -74,7 +74,7 @@ available remotes when you add a mount, and stores the *where* in GSettings
 - **Available remotes** come from `rclone listremotes` when you add a mount in
   preferences. The panel only shows remotes you have explicitly added.
 - **State** is always read from `/proc/self/mounts`, looking for the
-  `fuse.rclone` filesystem type, and refreshed from `Gio.UnixMountMonitor`.
+  `fuse.rclone` filesystem type, and refreshed from `GioUnix.MountMonitor`.
   Nothing is cached, so mounts made outside the extension still show as mounted.
 - **Mounting** runs `rclone mount --daemon`, then waits until the mount point
   lists at least one file before opening Files. Failures are shown in a dialog

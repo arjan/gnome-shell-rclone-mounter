@@ -7,6 +7,7 @@
 
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
+import GioUnix from 'gi://GioUnix';
 import GObject from 'gi://GObject';
 import St from 'gi://St';
 
@@ -148,7 +149,7 @@ class Indicator extends PanelMenu.Button {
         });
         this.add_child(this._icon);
 
-        this._mountMonitor = Gio.UnixMountMonitor.get();
+        this._mountMonitor = GioUnix.MountMonitor.get();
         this._mountsChangedId =
             this._mountMonitor.connect('mounts-changed', () => this._syncMountStates());
 
@@ -190,8 +191,8 @@ class Indicator extends PanelMenu.Button {
 
     /* Mount state is always derived from the kernel, never cached, so mounts
      * made outside this extension are reflected too. */
-    _syncMountStates() {
-        const mounted = Rclone.activeMounts();
+    async _syncMountStates() {
+        const mounted = await Rclone.activeMounts();
         let anyMounted = false;
 
         for (const [name, remote] of this._remotes) {
@@ -231,7 +232,7 @@ class Indicator extends PanelMenu.Button {
         const remote = this._remotes.get(name);
         const cancellable = new Gio.Cancellable();
         this._pending.set(name, cancellable);
-        this._syncMountStates();
+        await this._syncMountStates();
 
         try {
             const options = Rclone.parseMountOptions(
@@ -253,7 +254,7 @@ class Indicator extends PanelMenu.Button {
         } finally {
             this._pending.delete(name);
             if (!cancellable.is_cancelled())
-                this._syncMountStates();
+                await this._syncMountStates();
         }
     }
 
@@ -264,7 +265,7 @@ class Indicator extends PanelMenu.Button {
         const remote = this._remotes.get(name);
         const cancellable = new Gio.Cancellable();
         this._pending.set(name, cancellable);
-        this._syncMountStates();
+        await this._syncMountStates();
 
         try {
             await Rclone.unmount(remote.mountpoint);
@@ -278,7 +279,7 @@ class Indicator extends PanelMenu.Button {
         } finally {
             this._pending.delete(name);
             if (!cancellable.is_cancelled())
-                this._syncMountStates();
+                await this._syncMountStates();
         }
     }
 
