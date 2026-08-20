@@ -160,21 +160,14 @@ export default class RcloneMounterPreferences extends ExtensionPreferences {
             return;
         }
 
-        const content = new Gtk.Box({
-            orientation: Gtk.Orientation.VERTICAL,
-            spacing: 12,
-            margin_top: 12,
-            margin_bottom: 12,
-            margin_start: 12,
-            margin_end: 12,
-        });
-
-        const remoteModel = Gtk.StringList.new(available);
+        /* ComboRow only opens its popover when it is a ListBox child, which
+         * PreferencesGroup provides. A Gtk.Box parent leaves it unactivatable. */
+        const group = new Adw.PreferencesGroup();
         const remoteRow = new Adw.ComboRow({
             title: _('Remote'),
-            model: remoteModel,
+            model: Gtk.StringList.new(available),
         });
-        content.append(remoteRow);
+        group.add(remoteRow);
 
         const pathRow = new Adw.EntryRow({
             title: _('Mount point'),
@@ -184,7 +177,10 @@ export default class RcloneMounterPreferences extends ExtensionPreferences {
             const remote = available[remoteRow.get_selected()];
             pathRow.set_text(Rclone.defaultMountpoint(remote));
         });
-        content.append(pathRow);
+        group.add(pathRow);
+
+        const page = new Adw.PreferencesPage();
+        page.add(group);
 
         const dialog = new Adw.Window({
             transient_for: window,
@@ -209,7 +205,7 @@ export default class RcloneMounterPreferences extends ExtensionPreferences {
 
         const toolbar = new Adw.ToolbarView();
         toolbar.add_top_bar(header);
-        toolbar.set_content(content);
+        toolbar.set_content(page);
         dialog.set_content(toolbar);
         dialog.present();
     }
