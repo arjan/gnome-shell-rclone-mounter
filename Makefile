@@ -50,12 +50,21 @@ prefs:
 # GNOME 49+ uses the Mutter Development Kit instead of --nested (removed with X11).
 MUTTER_DEVKIT := /usr/libexec/mutter-devkit
 
+# dbus-run-session has no gnome-keyring. xdg-desktop-portal then waits ~25s for
+# org.freedesktop.secrets; this stub makes activation fail immediately.
+NESTED_DATA := $(CURDIR)/dev
+
 nested:
 	@if [ ! -x '$(MUTTER_DEVKIT)' ]; then \
 		echo 'mutter-devkit is not installed (expected at $(MUTTER_DEVKIT)).'; \
 		echo 'On Ubuntu: sudo apt install mutter-dev-bin'; \
 		exit 1; \
 	fi
+	@echo 'Starting nested GNOME Shell via mutter-devkit...'
+	GTK_A11Y=none \
+	ADW_DISABLE_PORTAL=1 \
+	GDK_DEBUG=no-portals \
+	XDG_DATA_DIRS='$(NESTED_DATA):$(or $(XDG_DATA_DIRS),/usr/local/share:/usr/share)' \
 	dbus-run-session -- gnome-shell --devkit --wayland
 
 logs:

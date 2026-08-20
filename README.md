@@ -98,7 +98,8 @@ make pack     # distributable zip
 `make nested` starts a nested GNOME Shell via the Mutter Development Kit
 (`gnome-shell --devkit --wayland`). On GNOME 49, `--nested` was removed; install
 `mutter-dev-bin` on Ubuntu if the command complains about a missing
-`mutter-devkit`.
+`mutter-devkit`. The target stubs `org.freedesktop.secrets` and disables
+portals so xdg-desktop-portal does not sit for ~25s waiting for gnome-keyring.
 
 The test suite (`tests/smoke.js`) runs under plain `gjs` with a fixture
 `rclone.conf` (via `RCLONE_CONFIG`) and an in-memory GSettings backend.
