@@ -161,6 +161,61 @@ try {
     failures++;
 }
 
+print('wait cancellation');
+const cancelDir = GLib.dir_make_tmp('rclone-mounter-XXXXXX');
+
+const alreadyCancelled = new Gio.Cancellable();
+alreadyCancelled.cancel();
+try {
+    await Rclone.waitUntilPopulated(cancelDir, 30000, alreadyCancelled);
+    print('  FAIL  already-cancelled wait should throw');
+    failures++;
+} catch (error) {
+    check('already-cancelled wait throws', error.message, 'Cancelled');
+}
+
+const cancellable = new Gio.Cancellable();
+const cancelStarted = GLib.get_monotonic_time();
+GLib.timeout_add(GLib.PRIORITY_DEFAULT, 40, () => {
+    cancellable.cancel();
+    return GLib.SOURCE_REMOVE;
+});
+try {
+    await Rclone.waitUntilPopulated(cancelDir, 30000, cancellable);
+    print('  FAIL  cancelled wait should throw');
+    failures++;
+} catch (error) {
+    check('cancelled wait throws', error.message, 'Cancelled');
+    check('cancelled wait returns before the deadline',
+        (GLib.get_monotonic_time() - cancelStarted) / 1000 < 5000, true);
+}
+
+const clearStarted = GLib.get_monotonic_time();
+const waiting = Rclone.waitUntilPopulated(cancelDir, 30000);
+GLib.timeout_add(GLib.PRIORITY_DEFAULT, 40, () => {
+    Rclone.clearDelays();
+    return GLib.SOURCE_REMOVE;
+});
+try {
+    await waiting;
+    print('  FAIL  clearDelays should cancel the wait');
+    failures++;
+} catch (error) {
+    check('clearDelays rejects the wait', error.message, 'Cancelled');
+    check('clearDelays returns before the deadline',
+        (GLib.get_monotonic_time() - clearStarted) / 1000 < 5000, true);
+}
+
+const cancelledMounts = new Gio.Cancellable();
+cancelledMounts.cancel();
+try {
+    await Rclone.activeMounts(cancelledMounts);
+    print('  FAIL  cancelled activeMounts should throw');
+    failures++;
+} catch {
+    print('  ok    cancelled activeMounts throws');
+}
+
 print('reachability');
 check('existing directory is reachable', await Rclone.isReachable(populatedDir), true);
 check('missing path is not reachable',
@@ -179,7 +234,7 @@ check('unrelated errors are not disconnected',
     Rclone.isDisconnectedError(new Error('rclone mount failed')),
     false);
 
-for (const dir of [emptyDir, populatedDir, delayedDir]) {
+for (const dir of [emptyDir, populatedDir, delayedDir, cancelDir]) {
     const children = Gio.File.new_for_path(dir).enumerate_children(
         'standard::name', Gio.FileQueryInfoFlags.NONE, null);
     let info;

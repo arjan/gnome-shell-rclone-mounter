@@ -22,21 +22,6 @@ import * as Rclone from '../lib/rclone.js';
 
 const SPINNER_SIZE = 16;
 
-function showErrorDialog(title, description) {
-    const dialog = new ModalDialog.ModalDialog();
-    dialog.contentLayout.add_child(new Dialog.MessageDialogContent({
-        title,
-        description,
-    }));
-    dialog.addButton({
-        label: _('Close'),
-        action: () => dialog.close(),
-        default: true,
-        key: Clutter.KEY_Escape,
-    });
-    dialog.open();
-}
-
 const RemoteMenuItem = GObject.registerClass({
     Signals: {
         'open': {},
@@ -142,6 +127,8 @@ class Indicator extends PanelMenu.Button {
         this._openPreferences = openPreferences;
         this._remotes = new Map();
         this._pending = new Map();
+        this._dialogs = new Set();
+        this._cancellable = new Gio.Cancellable();
 
         this._icon = new St.Icon({
             icon_name: 'folder-remote-symbolic',
@@ -192,7 +179,18 @@ class Indicator extends PanelMenu.Button {
     /* Mount state is always derived from the kernel, never cached, so mounts
      * made outside this extension are reflected too. */
     async _syncMountStates() {
-        const mounted = await Rclone.activeMounts();
+        let mounted;
+        try {
+            mounted = await Rclone.activeMounts(this._cancellable);
+        } catch (error) {
+            if (this._cancellable.is_cancelled())
+                return;
+            console.error(`rclone-mounter: ${error.message}`);
+            return;
+        }
+        if (this._cancellable.is_cancelled())
+            return;
+
         let anyMounted = false;
 
         for (const [name, remote] of this._remotes) {
@@ -202,10 +200,30 @@ class Indicator extends PanelMenu.Button {
             anyMounted ||= isMounted;
         }
 
+        if (this._cancellable.is_cancelled())
+            return;
+
         if (anyMounted)
             this._icon.add_style_class_name('rclone-mounted');
         else
             this._icon.remove_style_class_name('rclone-mounted');
+    }
+
+    _showError(title, description) {
+        const dialog = new ModalDialog.ModalDialog();
+        this._dialogs.add(dialog);
+        dialog.connect('closed', () => this._dialogs.delete(dialog));
+        dialog.contentLayout.add_child(new Dialog.MessageDialogContent({
+            title,
+            description,
+        }));
+        dialog.addButton({
+            label: _('Close'),
+            action: () => dialog.close(),
+            default: true,
+            key: Clutter.KEY_Escape,
+        });
+        dialog.open();
     }
 
     async _openRemote(name) {
@@ -220,7 +238,7 @@ class Indicator extends PanelMenu.Button {
             }
 
             this.menu.close();
-            showErrorDialog(_('Could not open remote'), `${name}: ${error.message}`);
+            this._showError(_('Could not open remote'), `${name}: ${error.message}`);
             console.error(`rclone-mounter: ${error.message}`);
         }
     }
@@ -239,17 +257,17 @@ class Indicator extends PanelMenu.Button {
                 this._settings.get_string('mount-options'));
             await Rclone.mount(name, remote.mountpoint, options);
             await Rclone.waitUntilPopulated(remote.mountpoint, 30000, cancellable);
-            if (cancellable.is_cancelled())
+            if (cancellable.is_cancelled() || this._cancellable.is_cancelled())
                 return;
 
             this.menu.close();
             Rclone.openInFiles(remote.mountpoint);
         } catch (error) {
-            if (cancellable.is_cancelled())
+            if (cancellable.is_cancelled() || error.message === 'Cancelled')
                 return;
 
             this.menu.close();
-            showErrorDialog(_('Could not mount remote'), `${name}: ${error.message}`);
+            this._showError(_('Could not mount remote'), `${name}: ${error.message}`);
             console.error(`rclone-mounter: ${error.message}`);
         } finally {
             this._pending.delete(name);
@@ -274,7 +292,7 @@ class Indicator extends PanelMenu.Button {
                 return;
 
             this.menu.close();
-            showErrorDialog(_('Could not unmount remote'), `${name}: ${error.message}`);
+            this._showError(_('Could not unmount remote'), `${name}: ${error.message}`);
             console.error(`rclone-mounter: ${error.message}`);
         } finally {
             this._pending.delete(name);
@@ -284,12 +302,18 @@ class Indicator extends PanelMenu.Button {
     }
 
     destroy() {
+        this._cancellable.cancel();
         for (const cancellable of this._pending.values())
             cancellable.cancel();
         this._pending.clear();
+        Rclone.clearDelays();
 
         this._mountMonitor.disconnect(this._mountsChangedId);
         this._settings.disconnect(this._settingsChangedId);
+
+        for (const dialog of [...this._dialogs])
+            dialog.destroy();
+        this._dialogs.clear();
 
         this._remotes.clear();
         this._settings = null;

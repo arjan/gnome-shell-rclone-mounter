@@ -40,7 +40,11 @@ export default class RcloneMounterPreferences extends ExtensionPreferences {
         this._mountsSettings = settings;
         this._rebuildMountRows();
 
-        settings.connect('changed::mountpoints', () => this._rebuildMountRows());
+        const mountsChangedId = settings.connect(
+            'changed::mountpoints', () => this._rebuildMountRows());
+        window.connect('destroy', () => {
+            settings.disconnect(mountsChangedId);
+        });
 
         return group;
     }
